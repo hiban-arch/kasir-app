@@ -6,13 +6,6 @@
   <title>Aplikasi Kasir POS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <style>
-    @media print {
-      body * { visibility: hidden; }
-      #receipt-print, #receipt-print * { visibility: visible; }
-      #receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
-    }
-  </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800">
 
@@ -87,7 +80,7 @@
 
   </main>
 
-  <!-- Modal 1: Kelola Menu -->
+  <!-- Modal 1: Kelola & Edit Menu -->
   <div id="modal-menu" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -112,20 +105,26 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Harga (Rp)</label>
-            <input type="number" id="menu-harga" required class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="15000">
+            <input type="number" id="menu-harga" required class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="18000">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Variasi / Opsi</label>
-            <input type="text" id="menu-variasi" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="Dingin / Panas">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Variasi / Opsi (Gunakan pemisah /)</label>
+            <input type="text" id="menu-variasi" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="Ice / Hot">
           </div>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">URL Gambar (Opsional)</label>
           <input type="url" id="menu-img" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="https://...">
         </div>
-        <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg text-xs shadow-sm">
-          Simpan Menu ke Database
-        </button>
+        
+        <div class="flex gap-2">
+          <button type="submit" id="btn-submit-menu" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg text-xs shadow-sm">
+            Simpan Menu ke Database
+          </button>
+          <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-3 py-2 rounded-lg text-xs">
+            Batal
+          </button>
+        </div>
       </form>
 
       <h4 class="font-bold text-xs text-gray-700 mb-2">Daftar Menu Aktif:</h4>
@@ -133,11 +132,25 @@
     </div>
   </div>
 
-  <!-- Modal 2: Riwayat Penjualan -->
+  <!-- Modal 2: Pilihan Variasi (Ice / Hot) -->
+  <div id="modal-variation" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl w-full max-w-xs p-5 shadow-xl text-center">
+      <h3 class="font-bold text-base text-gray-800 mb-1" id="variation-title">Pilih Opsi</h3>
+      <p class="text-xs text-gray-400 mb-4">Silakan pilih variasi menu ini:</p>
+      <div id="variation-options" class="space-y-2 mb-4">
+        <!-- Pilihan opsi dirender dinamis -->
+      </div>
+      <button onclick="closeModal('modal-variation')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded-xl text-xs">
+        Batal
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 3: Riwayat Penjualan -->
   <div id="modal-history" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
     <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl">
       <div class="flex justify-between items-center border-b pb-3 mb-4">
-        <h3 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-receipt text-teal-600"></i> Riwayat Penjualan (Maks 50)</h3>
+        <h3 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-receipt text-teal-600"></i> Riwayat Penjualan</h3>
         <button onclick="closeModal('modal-history')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
       </div>
       <div class="max-h-80 overflow-y-auto">
@@ -157,12 +170,16 @@
   </div>
 
   <script>
+    // GANTI URL DI BAWAH INI DENGAN URL WEB APP APPS SCRIPT ANDA
     const SCRIPT_URL = "GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT_ANDA"; 
 
     let menuData = [];
     let cart = [];
     let totalPrice = 0;
+    let editIndex = -1; // -1 = Tambah baru, >=0 = Edit menu
+    let selectedItemForCart = null;
 
+    // --- 1. SINKRONISASI DATA MENU ---
     async function loadMenu() {
       try {
         const res = await fetch(`${SCRIPT_URL}?action=getMenu`);
@@ -188,14 +205,14 @@
         grid.innerHTML = `<p class="col-span-full text-center text-gray-400 py-8">Menu tidak ditemukan</p>`;
         return;
       }
-      items.forEach(item => {
+      items.forEach((item, index) => {
         grid.innerHTML += `
           <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
             <img src="${item.img}" class="w-full h-28 object-cover rounded-xl mb-2" alt="${item.nama}">
             <h3 class="font-bold text-sm text-gray-800">${item.nama}</h3>
             <p class="text-[10px] text-gray-400 mb-2">${item.variasi || '-'}</p>
             <div class="flex items-center justify-between mt-auto">
-              <button onclick="addToCart('${item.nama}', ${item.harga}, '${item.img}')" class="bg-teal-50 text-teal-700 hover:bg-teal-100 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1">
+              <button onclick="handleAddToCart(${index})" class="bg-teal-50 text-teal-700 hover:bg-teal-100 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1">
                 <i class="fa-solid fa-plus text-[10px]"></i> Tambah
               </button>
               <span class="font-bold text-sm text-gray-900">Rp ${item.harga.toLocaleString()}</span>
@@ -208,6 +225,40 @@
     function filterCat(cat) {
       if (cat === 'Semua') renderMenu(menuData);
       else renderMenu(menuData.filter(m => m.kategori.toLowerCase() === cat.toLowerCase()));
+    }
+
+    // --- 2. PENANGANAN KERANJANG & OPSI VARIASI ---
+    function handleAddToCart(index) {
+      const item = menuData[index];
+      
+      if (item.variasi && item.variasi.trim() !== '' && item.variasi !== '-') {
+        selectedItemForCart = item;
+        const options = item.variasi.split('/').map(v => v.trim()).filter(v => v !== '');
+        
+        const optionsContainer = document.getElementById('variation-options');
+        optionsContainer.innerHTML = '';
+        
+        options.forEach(opt => {
+          optionsContainer.innerHTML += `
+            <button onclick="confirmAddToCartWithVariation('${opt}')" class="w-full bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold py-2.5 px-4 rounded-xl text-xs border border-teal-200 transition">
+              ${opt}
+            </button>
+          `;
+        });
+
+        document.getElementById('variation-title').innerText = item.nama;
+        openModal('modal-variation');
+      } else {
+        addToCart(item.nama, item.harga, item.img);
+      }
+    }
+
+    function confirmAddToCartWithVariation(variationOption) {
+      if (selectedItemForCart) {
+        addToCart(`${selectedItemForCart.nama} (${variationOption})`, selectedItemForCart.harga, selectedItemForCart.img);
+        closeModal('modal-variation');
+        selectedItemForCart = null;
+      }
     }
 
     function addToCart(nama, harga, img) {
@@ -275,6 +326,7 @@
       document.getElementById('change-display').innerText = `Rp ${change >= 0 ? change.toLocaleString() : 0}`;
     }
 
+    // --- 3. PEMBAYARAN ---
     async function processPayment() {
       const cash = Number(document.getElementById('cash-input').value) || 0;
       if (cart.length === 0) return alert("Keranjang belanja masih kosong!");
@@ -300,17 +352,9 @@
       }
     }
 
-    function openModal(id) {
-      document.getElementById(id).classList.remove('hidden');
-      document.getElementById(id).classList.add('flex');
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-      document.getElementById(id).classList.remove('flex');
-    }
-
+    // --- 4. KELOLA & EDIT MENU ---
     function openMenuModal() {
+      cancelEdit();
       renderEditMenuList();
       openModal('modal-menu');
     }
@@ -325,10 +369,34 @@
               <p class="font-bold text-gray-800">${item.nama} <span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${item.kategori}</span></p>
               <p class="text-gray-400">Rp ${item.harga.toLocaleString()} | ${item.variasi || '-'}</p>
             </div>
-            <button onclick="deleteMenu(${index})" class="text-red-500 hover:text-red-700 font-semibold">Hapus</button>
+            <div class="flex gap-2">
+              <button onclick="editMenu(${index})" class="text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 bg-blue-50 rounded">Edit</button>
+              <button onclick="deleteMenu(${index})" class="text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">Hapus</button>
+            </div>
           </div>
         `;
       });
+    }
+
+    function editMenu(index) {
+      editIndex = index;
+      const item = menuData[index];
+
+      document.getElementById('menu-nama').value = item.nama;
+      document.getElementById('menu-kategori').value = item.kategori;
+      document.getElementById('menu-harga').value = item.harga;
+      document.getElementById('menu-variasi').value = item.variasi || '';
+      document.getElementById('menu-img').value = item.img || '';
+
+      document.getElementById('btn-submit-menu').innerText = "Perbarui Menu";
+      document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    }
+
+    function cancelEdit() {
+      editIndex = -1;
+      document.getElementById('form-menu').reset();
+      document.getElementById('btn-submit-menu').innerText = "Simpan Menu ke Database";
+      document.getElementById('btn-cancel-edit').classList.add('hidden');
     }
 
     async function saveMenu(e) {
@@ -339,15 +407,19 @@
       const variasi = document.getElementById('menu-variasi').value;
       const img = document.getElementById('menu-img').value || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300';
 
-      menuData.push({ id: Date.now(), kategori, nama, harga, variasi, img });
+      if (editIndex >= 0) {
+        menuData[editIndex] = { ...menuData[editIndex], nama, kategori, harga, variasi, img };
+      } else {
+        menuData.push({ id: Date.now(), kategori, nama, harga, variasi, img });
+      }
 
       await fetch(SCRIPT_URL, {
         method: "POST",
         body: JSON.stringify({ action: "updateMenu", menu: menuData })
       });
 
-      alert("Menu berhasil disimpan!");
-      document.getElementById('form-menu').reset();
+      alert(editIndex >= 0 ? "Menu berhasil diperbarui!" : "Menu berhasil ditambahkan!");
+      cancelEdit();
       renderMenu(menuData);
       renderEditMenuList();
     }
@@ -364,6 +436,7 @@
       }
     }
 
+    // --- 5. RIWAYAT PENJUALAN ---
     async function openHistoryModal() {
       openModal('modal-history');
       const tbody = document.getElementById('history-table-body');
@@ -392,6 +465,18 @@
       }
     }
 
+    // --- UTILS MODAL ---
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      document.getElementById(id).classList.add('flex');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+      document.getElementById(id).classList.remove('flex');
+    }
+
+    // Inisialisasi
     loadMenu();
   </script>
 </body>
