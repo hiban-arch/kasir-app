@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aplikasi Kasir POS</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
     @media print {
       body * { visibility: hidden; }
@@ -13,122 +14,212 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
+<body class="bg-gray-100 font-sans text-gray-800">
 
   <!-- Header Navigasi -->
-  <header class="bg-blue-600 text-white p-4 flex justify-between items-center shadow">
-    <h1 class="text-xl font-bold">POS KASIR WEB</h1>
-    <div class="space-x-2">
-      <button onclick="openOpenBillModal()" class="bg-yellow-500 px-3 py-1.5 rounded text-sm font-semibold hover:bg-yellow-600">Open Bill</button>
-      <button onclick="openHistoryModal()" class="bg-blue-500 px-3 py-1.5 rounded text-sm font-semibold hover:bg-blue-700">Riwayat 50 TRX</button>
-      <button onclick="openMenuModal()" class="bg-gray-700 px-3 py-1.5 rounded text-sm font-semibold hover:bg-gray-800">Edit Menu</button>
+  <header class="bg-white px-6 py-3 border-b flex justify-between items-center shadow-sm">
+    <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+      <i class="fa-solid fa-store text-teal-600"></i> Kasir POS
+    </h1>
+    <div class="flex gap-3">
+      <button onclick="openMenuModal()" class="bg-gray-100 text-gray-700 font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-200 text-sm">
+        <i class="fa-solid fa-pen-to-square"></i> Kelola Menu
+      </button>
+      <button onclick="openHistoryModal()" class="bg-gray-100 text-gray-700 font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-200 text-sm">
+        <i class="fa-solid fa-receipt"></i> Riwayat Penjualan
+      </button>
     </div>
   </header>
 
   <!-- Konten Utama -->
-  <main class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+  <main class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto">
     
-    <!-- Kolom Kiri: Katalog Menu -->
-    <section class="md:col-span-2 bg-white p-4 rounded shadow">
-      <div class="flex gap-2 mb-4">
-        <button onclick="filterCategory('All')" class="bg-gray-200 px-4 py-2 rounded font-semibold hover:bg-gray-300">Semua</button>
-        <button onclick="filterCategory('Makanan')" class="bg-gray-200 px-4 py-2 rounded font-semibold hover:bg-gray-300">Makanan</button>
-        <button onclick="filterCategory('Minuman')" class="bg-gray-200 px-4 py-2 rounded font-semibold hover:bg-gray-300">Minuman</button>
+    <!-- Kolom Kiri: Katalog & Filter (8/12) -->
+    <section class="lg:col-span-8 space-y-4">
+      <!-- Filter Kategori -->
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <button onclick="filterCat('Semua')" class="bg-teal-600 text-white font-medium px-5 py-2 rounded-xl text-sm shadow-sm">Semua</button>
+        <button onclick="filterCat('Makanan')" class="bg-white text-gray-600 hover:bg-gray-50 font-medium px-5 py-2 rounded-xl text-sm border">Makanan</button>
+        <button onclick="filterCat('Minuman')" class="bg-white text-gray-600 hover:bg-gray-50 font-medium px-5 py-2 rounded-xl text-sm border">Minuman</button>
       </div>
 
-      <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <!-- Card Menu dimasukkan via JS -->
+      <!-- Grid Katalog Menu -->
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="menu-grid">
+        <p class="col-span-full text-center text-gray-400 py-8">Memuat menu dari server...</p>
       </div>
     </section>
 
-    <!-- Kolom Kanan: Pesanan & Pembayaran -->
-    <section class="bg-white p-4 rounded shadow flex flex-col justify-between">
+    <!-- Kolom Kanan: Kasir / Bill Saat Ini (4/12) -->
+    <section class="lg:col-span-4 bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
       <div>
-        <h2 class="text-lg font-bold border-b pb-2 mb-3">Pesanan Aktif</h2>
-        <div id="cart-list" class="divide-y max-h-60 overflow-y-auto mb-4">
-          <p class="text-gray-400 text-center py-4">Belum ada item dipilih</p>
+        <h2 class="font-bold text-lg text-gray-800 border-b pb-3 mb-4">Bill Saat Ini</h2>
+
+        <!-- Daftar Item Keranjang -->
+        <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1" id="cart-items">
+          <p class="text-center text-gray-400 py-8 text-xs">Belum ada item terpilih</p>
         </div>
       </div>
 
-      <div class="border-t pt-3 space-y-3">
-        <div class="flex justify-between text-lg font-bold">
-          <span>Total:</span>
-          <span id="total-val" class="text-blue-600">Rp 0</span>
+      <!-- Footer Pembayaran -->
+      <div class="space-y-3 pt-4 border-t mt-4">
+        <div class="flex justify-between items-center font-bold text-gray-800">
+          <span class="text-sm">Total Harga:</span>
+          <span class="text-lg text-teal-700" id="total-price-display">Rp 0</span>
         </div>
 
         <div>
-          <label class="block text-xs text-gray-500 mb-1">Uang Diterima (Rp):</label>
-          <input type="number" id="cash-input" class="w-full border p-2 rounded focus:outline-blue-500" placeholder="0" oninput="calcChange()">
+          <label class="block text-xs text-gray-500 mb-1">Uang Diterima (Rp)</label>
+          <input type="number" id="cash-input" oninput="calcChange()" placeholder="0" class="w-full border-2 border-orange-400 rounded-xl px-3 py-2 font-bold text-sm focus:outline-none">
         </div>
 
-        <div class="flex justify-between text-md font-semibold text-green-600">
-          <span>Kembalian:</span>
-          <span id="change-val">Rp 0</span>
+        <div class="flex justify-between items-center text-xs font-bold">
+          <span class="text-gray-600">Kembalian:</span>
+          <span class="text-emerald-600 text-sm" id="change-display">Rp 0</span>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-2">
-          <button onclick="saveOpenBill()" class="bg-yellow-500 text-white font-bold py-2 rounded hover:bg-yellow-600">OPEN BILL</button>
-          <button onclick="processPayment()" class="bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700">BAYAR & PRINT</button>
+        <div class="grid grid-cols-1 gap-2 pt-1">
+          <button onclick="processPayment()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs shadow-sm w-full">
+            <i class="fa-solid fa-money-bill-wave mr-1"></i> Bayar Sekarang & Simpan
+          </button>
         </div>
       </div>
     </section>
+
   </main>
 
-  <!-- Area Print Struk Thermal -->
-  <div id="receipt-print" class="hidden p-2 text-xs font-mono">
-    <div class="text-center font-bold text-sm mb-1">STRUK PENJUALAN</div>
-    <div id="receipt-date" class="text-center mb-2"></div>
-    <hr class="border-dashed my-1">
-    <div id="receipt-items" class="space-y-1"></div>
-    <hr class="border-dashed my-1">
-    <div class="flex justify-between font-bold"><span>Total:</span><span id="receipt-total"></span></div>
-    <div class="flex justify-between"><span>Bayar:</span><span id="receipt-bayar"></span></div>
-    <div class="flex justify-between"><span>Kembali:</span><span id="receipt-kembali"></span></div>
-    <div class="text-center mt-3">Terima Kasih!</div>
+  <!-- Modal 1: Kelola Menu -->
+  <div id="modal-menu" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl w-full max-w-xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-pen-to-square text-teal-600"></i> Kelola & Edit Menu</h3>
+        <button onclick="closeModal('modal-menu')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+      </div>
+
+      <form id="form-menu" onsubmit="saveMenu(event)" class="space-y-3 bg-teal-50/50 p-4 rounded-xl border border-teal-100 mb-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Nama Menu</label>
+            <input type="text" id="menu-nama" required class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="Kopi Susu">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Kategori</label>
+            <select id="menu-kategori" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500">
+              <option value="Makanan">Makanan</option>
+              <option value="Minuman">Minuman</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Harga (Rp)</label>
+            <input type="number" id="menu-harga" required class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="15000">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Variasi / Opsi</label>
+            <input type="text" id="menu-variasi" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="Dingin / Panas">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">URL Gambar (Opsional)</label>
+          <input type="url" id="menu-img" class="w-full border rounded-lg px-3 py-1.5 text-xs focus:outline-teal-500" placeholder="https://...">
+        </div>
+        <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg text-xs shadow-sm">
+          Simpan Menu ke Database
+        </button>
+      </form>
+
+      <h4 class="font-bold text-xs text-gray-700 mb-2">Daftar Menu Aktif:</h4>
+      <div id="edit-menu-list" class="space-y-2 max-h-48 overflow-y-auto divide-y"></div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Riwayat Penjualan -->
+  <div id="modal-history" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl">
+      <div class="flex justify-between items-center border-b pb-3 mb-4">
+        <h3 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-receipt text-teal-600"></i> Riwayat Penjualan (Maks 50)</h3>
+        <button onclick="closeModal('modal-history')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+      </div>
+      <div class="max-h-80 overflow-y-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b text-gray-600">
+              <th class="p-2.5">ID TRX</th>
+              <th class="p-2.5">Tanggal</th>
+              <th class="p-2.5">Items</th>
+              <th class="p-2.5 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
-    const SCRIPT_URL = "URL_WEB_APP_GOOGLE_APPS_SCRIPT_ANDA"; // Masukkan URL GAS Anda di sini
+    const SCRIPT_URL = "GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT_ANDA"; 
+
     let menuData = [];
     let cart = [];
     let totalPrice = 0;
 
-    // Fetch Menu dari Google Sheets
     async function loadMenu() {
       try {
         const res = await fetch(`${SCRIPT_URL}?action=getMenu`);
         const data = await res.json();
         menuData = data.map(item => ({
-          id: item[0], kategori: item[1], nama: item[2], harga: Number(item[3]), variasi: item[4]
+          id: item[0],
+          kategori: item[1],
+          nama: item[2],
+          harga: Number(item[3]),
+          variasi: item[4],
+          img: item[5] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300'
         }));
         renderMenu(menuData);
-      } catch(e) { console.error(e); }
+      } catch (e) {
+        console.error("Gagal memuat menu:", e);
+      }
     }
 
     function renderMenu(items) {
       const grid = document.getElementById('menu-grid');
       grid.innerHTML = '';
+      if(items.length === 0) {
+        grid.innerHTML = `<p class="col-span-full text-center text-gray-400 py-8">Menu tidak ditemukan</p>`;
+        return;
+      }
       items.forEach(item => {
         grid.innerHTML += `
-          <div onclick="addToCart('${item.nama}', ${item.harga})" class="border p-3 rounded cursor-pointer hover:border-blue-500 bg-gray-50 hover:bg-blue-50 transition">
-            <span class="text-xs font-semibold px-2 py-0.5 bg-blue-100 text-blue-800 rounded">${item.kategori}</span>
-            <h3 class="font-bold text-sm mt-1">${item.nama}</h3>
-            <p class="text-xs text-gray-500">${item.variasi ? item.variasi : '-'}</p>
-            <p class="font-bold text-blue-600 mt-2">Rp ${item.harga.toLocaleString()}</p>
+          <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <img src="${item.img}" class="w-full h-28 object-cover rounded-xl mb-2" alt="${item.nama}">
+            <h3 class="font-bold text-sm text-gray-800">${item.nama}</h3>
+            <p class="text-[10px] text-gray-400 mb-2">${item.variasi || '-'}</p>
+            <div class="flex items-center justify-between mt-auto">
+              <button onclick="addToCart('${item.nama}', ${item.harga}, '${item.img}')" class="bg-teal-50 text-teal-700 hover:bg-teal-100 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1">
+                <i class="fa-solid fa-plus text-[10px]"></i> Tambah
+              </button>
+              <span class="font-bold text-sm text-gray-900">Rp ${item.harga.toLocaleString()}</span>
+            </div>
           </div>
         `;
       });
     }
 
-    function filterCategory(cat) {
-      if(cat === 'All') renderMenu(menuData);
-      else renderMenu(menuData.filter(m => m.kategori === cat));
+    function filterCat(cat) {
+      if (cat === 'Semua') renderMenu(menuData);
+      else renderMenu(menuData.filter(m => m.kategori.toLowerCase() === cat.toLowerCase()));
     }
 
-    function addToCart(nama, harga) {
+    function addToCart(nama, harga, img) {
       const exist = cart.find(i => i.nama === nama);
-      if(exist) exist.qty += 1;
-      else cart.push({ nama, harga, qty: 1 });
+      if (exist) { exist.qty += 1; } 
+      else { cart.push({ nama, harga, img, qty: 1 }); }
+      renderCart();
+    }
+
+    function updateQty(index, change) {
+      cart[index].qty += change;
+      if (cart[index].qty <= 0) cart.splice(index, 1);
       renderCart();
     }
 
@@ -138,49 +229,56 @@
     }
 
     function renderCart() {
-      const list = document.getElementById('cart-list');
-      if(cart.length === 0) {
-        list.innerHTML = `<p class="text-gray-400 text-center py-4">Belum ada item dipilih</p>`;
-        totalPrice = 0;
-        document.getElementById('total-val').innerText = `Rp 0`;
+      const container = document.getElementById('cart-items');
+      container.innerHTML = '';
+      totalPrice = 0;
+
+      if (cart.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-400 py-8 text-xs">Belum ada item terpilih</p>`;
+        document.getElementById('total-price-display').innerText = 'Rp 0';
         calcChange();
         return;
       }
-      
-      list.innerHTML = '';
-      totalPrice = 0;
+
       cart.forEach((item, idx) => {
-        const sub = item.harga * item.qty;
-        totalPrice += sub;
-        list.innerHTML += `
-          <div class="flex justify-between items-center py-2">
-            <div>
-              <p class="font-bold text-sm">${item.nama}</p>
-              <p class="text-xs text-gray-500">${item.qty} x Rp ${item.harga.toLocaleString()}</p>
+        const subtotal = item.harga * item.qty;
+        totalPrice += subtotal;
+        container.innerHTML += `
+          <div class="flex items-center justify-between border-b pb-3">
+            <div class="flex items-center gap-3">
+              <img src="${item.img}" class="w-12 h-12 object-cover rounded-xl">
+              <div>
+                <p class="font-bold text-xs text-gray-800">${item.qty}x ${item.nama}</p>
+                <p class="text-[10px] text-gray-400">(Rp ${item.harga.toLocaleString()} x ${item.qty})</p>
+              </div>
             </div>
             <div class="flex items-center gap-2">
-              <span class="font-bold text-sm">Rp ${sub.toLocaleString()}</span>
-              <button onclick="removeItem(${idx})" class="text-red-500 font-bold px-1 hover:bg-red-50 rounded">✕</button>
+              <div class="flex items-center border rounded-lg overflow-hidden bg-gray-50 mr-1">
+                <button onclick="updateQty(${idx}, -1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-200 text-xs">-</button>
+                <span class="px-2 text-xs font-semibold">${item.qty}</span>
+                <button onclick="updateQty(${idx}, 1)" class="px-1.5 py-0.5 text-blue-600 hover:bg-blue-100 text-xs">+</button>
+              </div>
+              <span class="font-bold text-xs">Rp ${subtotal.toLocaleString()}</span>
+              <button onclick="removeItem(${idx})" class="bg-red-50 text-red-400 hover:bg-red-100 p-1.5 rounded-lg"><i class="fa-solid fa-trash-can text-xs"></i></button>
             </div>
           </div>
         `;
       });
-      document.getElementById('total-val').innerText = `Rp ${totalPrice.toLocaleString()}`;
+
+      document.getElementById('total-price-display').innerText = `Rp ${totalPrice.toLocaleString()}`;
       calcChange();
     }
 
     function calcChange() {
       const cash = Number(document.getElementById('cash-input').value) || 0;
       const change = cash - totalPrice;
-      document.getElementById('change-val').innerText = `Rp ${change > 0 ? change.toLocaleString() : 0}`;
+      document.getElementById('change-display').innerText = `Rp ${change >= 0 ? change.toLocaleString() : 0}`;
     }
 
     async function processPayment() {
       const cash = Number(document.getElementById('cash-input').value) || 0;
-      if(cart.length === 0 || cash < totalPrice) {
-        alert("Nominal pembayaran belum cukup atau keranjang masih kosong!");
-        return;
-      }
+      if (cart.length === 0) return alert("Keranjang belanja masih kosong!");
+      if (cash < totalPrice) return alert("Jumlah pembayaran kurang!");
 
       const payload = {
         action: "saveTransaction",
@@ -191,39 +289,107 @@
         kembalian: cash - totalPrice
       };
 
-      // Cetak Struk
-      document.getElementById('receipt-date').innerText = new Date().toLocaleString();
-      document.getElementById('receipt-items').innerHTML = cart.map(i => `<div class="flex justify-between"><span>${i.qty}x ${i.nama}</span><span>Rp ${(i.qty*i.harga).toLocaleString()}</span></div>`).join('');
-      document.getElementById('receipt-total').innerText = `Rp ${totalPrice.toLocaleString()}`;
-      document.getElementById('receipt-bayar').innerText = `Rp ${cash.toLocaleString()}`;
-      document.getElementById('receipt-kembali').innerText = `Rp ${(cash - totalPrice).toLocaleString()}`;
-
-      window.print();
-
-      // Send to Apps Script
-      await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-      cart = [];
-      document.getElementById('cash-input').value = '';
-      renderCart();
+      try {
+        await fetch(https://script.google.com/macros/s/AKfycbw7INXTsx1gyifBgmSjBnY8zLpUgOdHtjbBVu8I4mgYJ7sQ531OS4YvssAN5W35rPeI/exec, { method: "POST", body: JSON.stringify(payload) });
+        alert("Transaksi Sukses & Tersimpan ke Google Sheets!");
+        cart = [];
+        document.getElementById('cash-input').value = '';
+        renderCart();
+      } catch (e) {
+        alert("Gagal menyimpan transaksi ke server.");
+      }
     }
 
-    async function saveOpenBill() {
-      if(cart.length === 0) return alert("Keranjang kosong!");
-      const name = prompt("Masukkan Nama Pelanggan / Nomor Meja:");
-      if(!name) return;
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      document.getElementById(id).classList.add('flex');
+    }
 
-      const payload = {
-        action: "saveOpenBill",
-        id: "BILL-" + Date.now(),
-        customer: name,
-        items: cart.map(i => `${i.qty}x ${i.nama}`).join(', '),
-        total: totalPrice
-      };
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+      document.getElementById(id).classList.remove('flex');
+    }
 
-      await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-      alert("Open Bill berhasil disimpan!");
-      cart = [];
-      renderCart();
+    function openMenuModal() {
+      renderEditMenuList();
+      openModal('modal-menu');
+    }
+
+    function renderEditMenuList() {
+      const container = document.getElementById('edit-menu-list');
+      container.innerHTML = '';
+      menuData.forEach((item, index) => {
+        container.innerHTML += `
+          <div class="flex items-center justify-between py-2 text-xs">
+            <div>
+              <p class="font-bold text-gray-800">${item.nama} <span class="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">${item.kategori}</span></p>
+              <p class="text-gray-400">Rp ${item.harga.toLocaleString()} | ${item.variasi || '-'}</p>
+            </div>
+            <button onclick="deleteMenu(${index})" class="text-red-500 hover:text-red-700 font-semibold">Hapus</button>
+          </div>
+        `;
+      });
+    }
+
+    async function saveMenu(e) {
+      e.preventDefault();
+      const nama = document.getElementById('menu-nama').value;
+      const kategori = document.getElementById('menu-kategori').value;
+      const harga = Number(document.getElementById('menu-harga').value);
+      const variasi = document.getElementById('menu-variasi').value;
+      const img = document.getElementById('menu-img').value || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300';
+
+      menuData.push({ id: Date.now(), kategori, nama, harga, variasi, img });
+
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateMenu", menu: menuData })
+      });
+
+      alert("Menu berhasil disimpan!");
+      document.getElementById('form-menu').reset();
+      renderMenu(menuData);
+      renderEditMenuList();
+    }
+
+    async function deleteMenu(index) {
+      if (confirm("Yakin ingin menghapus menu ini?")) {
+        menuData.splice(index, 1);
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "updateMenu", menu: menuData })
+        });
+        renderMenu(menuData);
+        renderEditMenuList();
+      }
+    }
+
+    async function openHistoryModal() {
+      openModal('modal-history');
+      const tbody = document.getElementById('history-table-body');
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-400">Memuat...</td></tr>`;
+
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=getHistory`);
+        const history = await res.json();
+        tbody.innerHTML = '';
+        if (history.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-400">Belum ada riwayat.</td></tr>`;
+          return;
+        }
+        history.forEach(row => {
+          tbody.innerHTML += `
+            <tr class="hover:bg-gray-50">
+              <td class="p-2.5 font-bold text-gray-700">${row[0]}</td>
+              <td class="p-2.5 text-gray-500">${row[1]}</td>
+              <td class="p-2.5">${row[2]}</td>
+              <td class="p-2.5 text-right font-bold text-emerald-600">Rp ${Number(row[3]).toLocaleString()}</td>
+            </tr>
+          `;
+        });
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Gagal memuat.</td></tr>`;
+      }
     }
 
     loadMenu();
